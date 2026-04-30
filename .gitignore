@@ -1,0 +1,18 @@
+# Environment variables (contains secrets)
+.env
+
+# Raw data files
+data/raw/*.csv
+data/raw/*.parquet
+
+# Python cache
+__pycache__/
+*.pyc
+
+# dbt artifacts
+.dbt/
+target/
+dbt_packages/
+
+# Benchmark output
+benchmark_results.md
