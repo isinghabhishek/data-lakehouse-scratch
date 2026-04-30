@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: daily_trip_summary
+    description: >
+      Gold layer daily aggregation of NYC Yellow Taxi trips. Each row represents
+      one calendar day and provides pre-computed metrics — trip volume, average
+      fare, average distance, and total revenue — so analysts can answer
+      day-level business questions without scanning the full Silver table.
+
+    columns:
+      - name: trip_date
+        description: >
+          Calendar date (UTC) derived from the trip pickup timestamp. Each row
+          in this model corresponds to exactly one distinct date.
+        tests:
+          - not_null
+          - unique
+
+      - name: total_trips
+        description: >
+          Total number of completed taxi trips that started on this date.
+          Computed as COUNT(*) over all Silver rows with a non-null pickup_at
+          that falls on trip_date.
+        tests:
+          - not_null
+
+      - name: avg_fare
+        description: >
+          Average meter-calculated fare amount in USD for trips on this date,
+          rounded to two decimal places. Excludes tips, tolls, and surcharges.
+
+      - name: avg_distance
+        description: >
+          Average trip distance in miles for trips on this date, as reported
+          by the taximeter.
+
+      - name: total_revenue
+        description: >
+          Sum of total_amount (the full amount charged to passengers, excluding
+          cash tips) across all trips on this date, in USD, rounded to two
+          decimal places. Useful as a top-line daily revenue figure.
+
+  - name: vendor_performance
+    description: >
+      Gold layer monthly rollup of taxi vendor performance metrics. Each row
+      represents one vendor for one calendar month and surfaces trip volume,
+      tipping behaviour, and average occupancy — enabling vendor-level
+      benchmarking and trend analysis over time.
+
+    columns:
+      - name: vendor_id
+        description: >
+          Integer identifier of the TPEP provider (taxi vendor) that supplied
+          the trip record. Sourced directly from the Silver stg_yellow_taxi
+          model.
+        tests:
+          - not_null
+
+      - name: trip_month
+        description: >
+          First timestamp of the calendar month (UTC) in which the trips
+          occurred, produced by DATE_TRUNC('month', pickup_at). Each
+          vendor_id / trip_month combination is unique in this model.
+        tests:
+          - not_null
+
+      - name: total_trips
+        description: >
+          Total number of trips completed by this vendor during the month.
+          Computed as COUNT(*) over all Silver rows matching the vendor and
+          month.
+
+      - name: avg_tip_pct
+        description: >
+          Average tip amount expressed as a percentage of the fare amount for
+          this vendor and month, rounded to two decimal places. Rows where
+          fare_amount is zero are excluded from the average via NULLIF to
+          avoid division-by-zero errors. Useful for comparing tipping
+          generosity across vendors.
+
+      - name: avg_passenger_count
+        description: >
+          Average number of passengers per trip for this vendor and month,
+          rounded to two decimal places. Provides a proxy for vehicle
+          utilisation and shared-ride patterns.

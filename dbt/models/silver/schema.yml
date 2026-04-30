@@ -1,0 +1,88 @@
+version: 2
+
+models:
+  - name: stg_yellow_taxi
+    description: >
+      Cleaned and typed Silver layer table derived from Bronze yellow taxi raw data.
+      Deduplicates on trip_id surrogate key.
+
+    columns:
+      - name: trip_id
+        description: >
+          Surrogate key computed as the MD5 hash of vendor_id, tpep_pickup_datetime,
+          tpep_dropoff_datetime, and passenger_count (raw VARCHAR values from Bronze),
+          encoded as a hex string. Uniquely identifies each trip after deduplication.
+        tests:
+          - not_null
+          - unique
+
+      - name: vendor_id
+        description: >
+          Integer identifier of the TPEP provider that provided the record.
+          Cast from the raw VARCHAR Bronze column.
+        tests:
+          - not_null
+
+      - name: pickup_at
+        description: >
+          Date and time when the meter was engaged (trip start). Cast to TIMESTAMP(6)
+          from the raw tpep_pickup_datetime VARCHAR column in Bronze.
+        tests:
+          - not_null
+
+      - name: dropoff_at
+        description: >
+          Date and time when the meter was disengaged (trip end). Cast to TIMESTAMP(6)
+          from the raw tpep_dropoff_datetime VARCHAR column in Bronze.
+
+      - name: passenger_count
+        description: >
+          Number of passengers in the vehicle as reported by the driver.
+          Cast to INTEGER from the raw VARCHAR Bronze column.
+
+      - name: trip_distance
+        description: >
+          Elapsed trip distance in miles as reported by the taximeter.
+          Cast to DOUBLE from the raw VARCHAR Bronze column.
+
+      - name: rate_code_id
+        description: >
+          Final rate code in effect at the end of the trip (e.g. 1=Standard rate,
+          2=JFK, 3=Newark). Cast to INTEGER from the raw ratecodeID VARCHAR column
+          in Bronze.
+
+      - name: payment_type
+        description: >
+          Numeric code indicating how the passenger paid (e.g. 1=Credit card,
+          2=Cash, 3=No charge, 4=Dispute). Cast to INTEGER from the raw VARCHAR
+          Bronze column.
+
+      - name: fare_amount
+        description: >
+          Meter-calculated fare amount in USD. Cast to DECIMAL(10,2) from the raw
+          VARCHAR Bronze column.
+
+      - name: tip_amount
+        description: >
+          Tip amount in USD. Automatically populated for credit card tips; cash tips
+          are not included. Cast to DECIMAL(10,2) from the raw VARCHAR Bronze column.
+
+      - name: total_amount
+        description: >
+          Total amount charged to passengers in USD, excluding cash tips. Cast to
+          DECIMAL(10,2) from the raw VARCHAR Bronze column.
+
+      - name: _ingested_at
+        description: >
+          Timestamp when the row was written to the Bronze layer by the ingestion
+          script. Passed through from Bronze without modification.
+
+      - name: _source_file
+        description: >
+          Name of the source CSV file from which this row was ingested. Passed
+          through from Bronze without modification.
+
+      - name: _silver_loaded_at
+        description: >
+          Timestamp when this row was written to the Silver layer by the dbt model
+          run. Set to current_timestamp at model execution time.

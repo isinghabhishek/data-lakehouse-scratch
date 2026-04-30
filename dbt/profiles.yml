@@ -1,0 +1,14 @@
+lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: trino
+      method: none
+      host: "{{ env_var('TRINO_HOST', 'localhost') }}"
+      port: "{{ env_var('TRINO_PORT', '8080') | int }}"
+      database: iceberg
+      schema: bronze
+      threads: 4
+      http_scheme: http
+      session_properties:
+        iceberg.nessie_reference_name: "{{ env_var('NESSIE_BRANCH', 'main') }}"
