@@ -1,0 +1,67 @@
+name: Docker Build Validation
+
+on:
+  push:
+    branches: [master, main, setup/**]
+    paths:
+      - 'docker-compose.yml'
+      - 'trino/**'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'docker-compose.yml'
+      - 'trino/**'
+      - '.github/workflows/docker-build.yml'
+
+jobs:
+  docker-compose-validate:
+    name: Docker Compose Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env for validation
+        run: |
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Validate docker-compose configuration
+        run: |
+          docker compose config --quiet
+          echo "✓ docker-compose.yml is valid"
+
+      - name: Lint docker-compose with hadolint
+        continue-on-error: true
+        run: |
+          docker run --rm -i hadolint/hadolint < Dockerfile 2>/dev/null || echo "No Dockerfile found (expected for compose-only setup)"
+
+  docker-pull-images:
+    name: Verify Docker Images Availability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Check MinIO image
+        run: docker pull minio/minio:latest
+
+      - name: Check MinIO Client image
+        run: docker pull minio/mc:latest
+
+      - name: Check Nessie image
+        run: docker pull projectnessie/nessie:latest
+
+      - name: Check Trino image
+        run: docker pull trinodb/trino:435
+
+      - name: Verify images pulled successfully
+        run: |
+          docker images | grep -E 'minio|nessie|trino'
+          echo "✓ All required Docker images are available"

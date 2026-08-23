@@ -1,0 +1,97 @@
+name: Lint and Validate
+
+on:
+  push:
+    branches: [master, main, setup/**]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  shell-lint:
+    name: Shell Script Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          find scripts -name '*.sh' -type f | while read script; do
+            echo "Linting $script"
+            shellcheck "$script" || exit 1
+          done
+        continue-on-error: true
+
+  python-lint:
+    name: Python Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pylint black isort
+
+      - name: Check code formatting with black
+        run: black --check scripts/ tests/ --diff
+        continue-on-error: true
+
+      - name: Check import sorting with isort
+        run: isort --check-only scripts/ tests/ --diff
+        continue-on-error: true
+
+      - name: Lint with flake8
+        run: |
+          flake8 scripts/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 scripts/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+
+  dockerfile-lint:
+    name: Dockerfile Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env for validation
+        run: |
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
+      - name: Validate docker-compose.yml
+        run: |
+          docker compose config --quiet
+          echo "✓ docker-compose.yml is valid"
+
+  env-validation:
+    name: Environment Configuration Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .env.example exists
+        run: |
+          if [ ! -f .env.example ]; then
+            echo "ERROR: .env.example not found"
+            exit 1
+          fi
+          echo ".env.example validation passed"
+
+      - name: Validate required environment variables
+        run: |
+          required_vars=("MINIO_ROOT_USER" "MINIO_ROOT_PASSWORD" "MINIO_API_PORT" "MINIO_CONSOLE_PORT" "NESSIE_PORT" "TRINO_PORT")
+          for var in "${required_vars[@]}"; do
+            if ! grep -q "$var" .env.example; then
+              echo "ERROR: Required variable $var not found in .env.example"
+              exit 1
+            fi
+          done
+          echo "All required environment variables found in .env.example"
