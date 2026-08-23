@@ -21,6 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create .env for validation
+        run: |
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
 
