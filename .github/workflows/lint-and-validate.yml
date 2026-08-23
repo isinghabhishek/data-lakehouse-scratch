@@ -60,9 +60,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create .env for validation
+        run: |
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
       - name: Validate docker-compose.yml
         run: |
           docker compose config --quiet
+          echo "✓ docker-compose.yml is valid"
 
   env-validation:
     name: Environment Configuration Validation
