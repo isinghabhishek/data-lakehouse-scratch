@@ -1,19 +1,5 @@
-name: dbt Compile & Validate
-
-on:
-  push:
-    branches: [master, main, setup/**]
-    paths:
-      - 'dbt/**'
-      - '.github/workflows/dbt-compile.yml'
-  pull_request:
-    branches: [master, main]
-    paths:
-      - 'dbt/**'
-
 jobs:
   dbt-compile:
-    name: dbt Compile & Parse
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +24,32 @@ jobs:
           cd dbt && dbt parse
         continue-on-error: true
 
+      - name: Create dbt profile from Secrets
+        env:
+          TRINO_HOST: ${{ secrets.TRINO_HOST }}
+          TRINO_PORT: ${{ secrets.TRINO_PORT }}
+          TRINO_USER: ${{ secrets.TRINO_USER }}
+          TRINO_PASSWORD: ${{ secrets.TRINO_PASSWORD }}
+          TRINO_CATALOG: ${{ secrets.TRINO_CATALOG }}
+          TRINO_SCHEMA: ${{ secrets.TRINO_SCHEMA }}
+          TRINO_METHOD: ${{ secrets.TRINO_METHOD }}
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<YAML
+          lakehouse:
+            target: dev
+            outputs:
+              dev:
+                type: trino
+                method: "${TRINO_METHOD}"
+                host: "${TRINO_HOST}"
+                port: ${TRINO_PORT}
+                user: "${TRINO_USER}"
+                catalog: "${TRINO_CATALOG}"
+                schema: "${TRINO_SCHEMA}"
+                password: "${TRINO_PASSWORD}"
+          YAML
+
       - name: dbt compile
         run: |
-          cd dbt && dbt compile --select
+          cd dbt && dbt compile
