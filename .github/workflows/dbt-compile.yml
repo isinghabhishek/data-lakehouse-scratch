@@ -1,19 +1,5 @@
-name: dbt Compile & Validate
-
-on:
-  push:
-    branches: [master, main, setup/**]
-    paths:
-      - 'dbt/**'
-      - '.github/workflows/dbt-compile.yml'
-  pull_request:
-    branches: [master, main]
-    paths:
-      - 'dbt/**'
-
 jobs:
   dbt-compile:
-    name: dbt Compile & Parse
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
